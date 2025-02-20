@@ -121,6 +121,20 @@ app.get('/task', tokenVerify, async (req, res) => {
     }
 })
 
+app.put('/task/:id', tokenVerify, async (req, res) => {
+    try {
+        const task = await Task.findOneAndUpdate(
+            {_id: req.params.id, userId: req.user.userId},
+            req.body,
+            {new:true}
+        )
+        if(!task) return res.status(404).send({error:"Task not found"})
+            res.send(task)
+    } catch (error) {
+        res.status(400).send({ error: 'Failed to update task', details: error.message });
+    }
+})
+
 app.get("/", async (req, res) => {
   res.send(`Your favorite task management server running on ${port}`);
 });
