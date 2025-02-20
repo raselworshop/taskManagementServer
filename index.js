@@ -112,6 +112,15 @@ app.post('/task', tokenVerify, async (req, res) => {
     }
 })
 
+app.get('/task', tokenVerify, async (req, res) => {
+    try {
+        const task = await Task.find({userId: req.user.userId}).sort({order:1})
+        res.send(task)
+    } catch (error) {
+        res.status(500).send({ error: 'Failed to fetch tasks', details: error.message });
+    }
+})
+
 app.get("/", async (req, res) => {
   res.send(`Your favorite task management server running on ${port}`);
 });
