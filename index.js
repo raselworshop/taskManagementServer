@@ -1,42 +1,68 @@
-const { MongoClient, ServerApiVersion } = require('mongodb');
 const express = require('express')
 const mongoose= require('mongoose')
 const cors = require('cors')
+const admin = require('firebase-admin')
+const jwt = require('jsonwebtoken')
 const morgan = require('morgan')
 const app = express();
 const port = process.env.PORT || 5000;
-require('dotenv').config();
-const uri = process.env.MONGO_URI
+const dotenv = require('dotenv');
 
-app.use(cors());
+//  load environment variables
+dotenv.config()
+
+// initialize express
+app.use(cors({origin:'http://localhost:5173'}));
 app.use(express.json())
 app.use(morgan('tiny'))
 
+// innitialize firebase admin 
+// console.log('MONGO_URI from env:', JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT));
+const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)
+admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount)
+})
 
+// Mongodb connection
+mongoose.connect(process.env.MONGO_URI)
+.then(()=> console.log(`Connencted to MongoDB atlas (database: task-management)`))
+.catch((error)=>{
+    console.log(`Mongodb connection error ${error}`)
+    process.exit(1)
+})
 
-// console.log('MONGO_URI from env:', process.env.MONGO_URI);
-// Create a MongoClient with a MongoClientOptions object to set the Stable API version
-const client = new MongoClient(uri, {
-  serverApi: {
-    version: ServerApiVersion.v1,
-    strict: true,
-    deprecationErrors: true,
-  }
-});
+// user schema 
+const userSchema = new mongoose.Schema({
+    userId: {type:String, required: true, unique: true},
+    email: String,
+    displayName: String,
+    role: String
+})
+const User = mongoose.model('User', userSchema)
 
-async function run() {
-  try {
-    // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
-    // Send a ping to confirm a successful connection
-    await client.db("admin").command({ ping: 1 });
-    console.log("Pinged your deployment. You successfully connected to MongoDB!");
-  } finally {
-    // Ensures that the client will close when you finish/error
-    await client.close();
-  }
+// task schema
+const taskShema = new mongoose.Schema({
+    title: {type: String, required:true, maxlength: 50},
+    description: {type: String, maxlength:200},
+    category: {type:String, enum:['To-Do', 'In Progress', 'Done'], required:true},
+    timestamp: {type:Date, default: Date.now},
+    userId: {type:String, required:true},
+    order:{type: Number, default: 0}
+})
+const Task = mongoose.model('Task', taskShema)
+
+// JWT middleware 
+const authMiddleware =(req, res, next)=>{
+    const token = req.headers.authorization?.split('Bearer ')[1];
+    if(!token){
+        return res.status(401).send({error:"Token required"})
+    }
+    jwt.verify(token, process.env.JWT_SECRET, (err, decoded)=>{
+        if(err) return res.status(401).send({error:"Invalid token"})
+            req.user = decoded;
+        next()
+    })
 }
-run().catch(console.dir);
 
 app.get('/', async (req, res) => {
     res.send(`Your favorite task management server running on ${port}`)
