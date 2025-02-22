@@ -36,7 +36,7 @@ const corsOptions = {
 app.use(cors(corsOptions));
 
 // innitialize firebase admin
-// console.log('MONGO_URI from env:', JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT));
+// // console.log('MONGO_URI from env:', JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT));
 const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
@@ -49,7 +49,7 @@ mongoose
     console.log(`Connected to MongoDB atlas (database: task-management)`)
   )
   .catch((error) => {
-    console.log(`Mongodb connection error ${error}`);
+    // console.log(`Mongodb connection error ${error}`);
     process.exit(1);
   });
 
@@ -93,16 +93,16 @@ const tokenVerify = (req, res, next) => {
 // login endpoint
 app.post("/login", async (req, res) => {
   const { idToken, role } = req.body;
-  // console.log("Login Request Body:", req.body); //returned data
+  // // console.log("Login Request Body:", req.body); //returned data
   if (!idToken) {
     return res.status(400).send({ error: "idToken missing in request" });
   }
   try {
     const decoded = await admin.auth().verifyIdToken(idToken);
-    // console.log("Decoded Token:", decoded); //returned data
+    // // console.log("Decoded Token:", decoded); //returned data
 
     let user = await User.findOne({ userId: decoded.uid });
-    // console.log("user from db", { user }); //returned data expected
+    // // console.log("user from db", { user }); //returned data expected
     if (!user) {
       user = new User({
         userId: decoded.uid,
@@ -110,9 +110,9 @@ app.post("/login", async (req, res) => {
         displayName: decoded.name,
         role: role || "user",
       });
-      // console.log("New User Before Save:", user);
+      // // console.log("New User Before Save:", user);
       await user.save();
-      // console.log("New User After Save:", user);
+      // // console.log("New User After Save:", user);
     }
     //generate jwt token
     const jwtToken = jwt.sign(
@@ -120,11 +120,11 @@ app.post("/login", async (req, res) => {
       process.env.JWT_SECRET,
       { expiresIn: "5h" }
     );
-    // console.log("Sending Response:", { token: jwtToken }); //no return why
+    // // console.log("Sending Response:", { token: jwtToken }); //no return why
     res.send({ token: jwtToken });
-    // console.log("Response Sent Successfully!"); //no return
+    // // console.log("Response Sent Successfully!"); //no return
   } catch (error) {
-    // console.error("Token verification failed:", error.message);
+    // // console.error("Token verification failed:", error.message);
     res
       .status(401)
       .send({ error: "Invalid Firebase token", details: error.message });
@@ -133,7 +133,7 @@ app.post("/login", async (req, res) => {
 
 // CRUD Endpoints
 app.post("/tasks", tokenVerify, async (req, res) => {
-  console.log("Posted task", { ...req.body, userId: req.user.userId });
+  // console.log("Posted task", { ...req.body, userId: req.user.userId });
   try {
     const task = new Task({ ...req.body, userId: req.user.userId });
     await task.save();
@@ -194,5 +194,5 @@ app.get("/", async (req, res) => {
 });
 
 app.listen(port, () => {
-  console.log(`Task management server is running on port ${port}`);
+  // console.log(`Task management server is running on port ${port}`);
 });
